@@ -10,6 +10,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Kismet/GameplayStatics.h"
+#include "Interface/InteractInterface.h"
+#include "Component/StatComponent.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -50,6 +52,12 @@ AZadanieCharacter::AZadanieCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+
+	StatComponent = CreateDefaultSubobject<UStatComponent>(TEXT("StatComponent"));
+
+	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Weapon"));
+	FAttachmentTransformRules AttachmentRules(EAttachmentRule::SnapToTarget, true);
+
 }
 
 void AZadanieCharacter::BeginPlay()
@@ -136,26 +144,33 @@ void AZadanieCharacter::Look(const FInputActionValue& Value)
 
 void AZadanieCharacter::Interact()
 {
-
+	if (CanPress)
+	{
+		if (BaseButton && BaseButton->GetClass()->ImplementsInterface(UInteractInterface::StaticClass()))
+		{
+			IInteractInterface::Execute_Interact(BaseButton);
+		}
+	}
 }
 
 void AZadanieCharacter::Attack()
 {
-	//FVector TraceStart = GetActorLocation();
-	//FVector TraceEnd = GetActorLocation() + GetActorForwardVector() * 1000.0f;
+	FHitResult Hit;
 
-	//FCollisionQueryParams QueryParams;
-	//QueryParams.AddIgnoredActor(this);
+	FVector TraceStart = GetActorLocation();
+	FVector TraceEnd = GetActorLocation() + GetActorForwardVector() * 1000.0f;
+	
+	ECollisionChannel TraceChannel = ECC_Visibility;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
 
-	//FHitResult Hit;
+	GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd,TraceChannel, QueryParams);
+	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, 5.0f, 0, 10.0f); //Draw Trace line
 
-	////GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, TraceChannelProperty, QueryParams);
-	////DrawDebugLine(GetWorld(), TraceStart, TraceEnd, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, 5.0f, 0, 10.0f); //Draw Trace line
-
-	//if (Hit.bBlockingHit && IsValid(Hit.GetActor())) 
-	//{
-	//	UGameplayStatics::ApplyDamage(Hit, 20.f, nullptr, this, UDamageType::StaticClass());
-	//}
+	if (Hit.bBlockingHit && IsValid(Hit.GetActor())) 
+	{
+		UGameplayStatics::ApplyDamage(Hit.GetActor(), 20.f, nullptr, this, UDamageType::StaticClass());
+	}
 }
 
 void AZadanieCharacter::SoundDetect()
@@ -166,5 +181,24 @@ void AZadanieCharacter::SoundDetect()
 	{
 		
 	}
+}
+
+float AZadanieCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	if (StatComponent->Health <= 0)
+	{
+		return 0;
+	}
+
+	// Calculate actual damage
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	StatComponent->ApplyDamage(ActualDamage);
+
+	if (StatComponent->IsDeath)
+	{
+		Destroy();
+	}
+
+	return ActualDamage;
 }
 

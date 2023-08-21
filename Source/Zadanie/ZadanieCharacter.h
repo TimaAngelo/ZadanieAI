@@ -47,13 +47,24 @@ class AZadanieCharacter : public ACharacter
 
 	/** Play sound Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-		class UInputAction* SoundDetectAction;
+	class UInputAction* SoundDetectAction;
 
 public:
 	AZadanieCharacter();
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Stats")
+	bool CanPress;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Actor")
+	AActor* BaseButton;
+
+	UPROPERTY(EditInstanceOnly, Category = "Changeables")
+	UStaticMeshComponent* WeaponMesh;
 
 protected:
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class UStatComponent* StatComponent;
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -66,6 +77,8 @@ protected:
 	void Interact();
 
 	void SoundDetect();
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 			
 
 protected:

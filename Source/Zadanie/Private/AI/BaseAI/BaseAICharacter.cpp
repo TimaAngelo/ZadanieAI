@@ -4,6 +4,8 @@
 #include "AI/BaseAI/BaseAICharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
+#include <Component/StatComponent.h>
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 ABaseAICharacter::ABaseAICharacter()
@@ -17,7 +19,7 @@ ABaseAICharacter::ABaseAICharacter()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
-
+	StatComponent = CreateDefaultSubobject<UStatComponent>(TEXT("StatComponent"));
 
 }
 
@@ -42,3 +44,46 @@ void ABaseAICharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 }
 
+void ABaseAICharacter::Patrol()
+{
+	
+}
+
+float ABaseAICharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+	if (StatComponent->Health <= 0)
+	{
+		return 0;
+	}
+
+	// Calculate actual damage
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	StatComponent->ApplyDamage(ActualDamage);
+
+	if (StatComponent->IsDeath)
+	{
+		Destroy();
+	}
+
+	return ActualDamage;
+}
+
+void ABaseAICharacter::Attack()
+{
+	FHitResult Hit;
+
+	FVector TraceStart = GetActorLocation();
+	FVector TraceEnd = GetActorLocation() + GetActorForwardVector() * 1000.0f;
+
+	ECollisionChannel TraceChannel = ECC_Visibility;
+	FCollisionQueryParams QueryParams;
+	QueryParams.AddIgnoredActor(this);
+
+	GetWorld()->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, TraceChannel, QueryParams);
+	DrawDebugLine(GetWorld(), TraceStart, TraceEnd, Hit.bBlockingHit ? FColor::Blue : FColor::Red, false, 5.0f, 0, 10.0f); //Draw Trace line
+
+	if (Hit.bBlockingHit && IsValid(Hit.GetActor()))
+	{
+		UGameplayStatics::ApplyDamage(Hit.GetActor(), 20.f, nullptr, this, UDamageType::StaticClass());
+	}
+}

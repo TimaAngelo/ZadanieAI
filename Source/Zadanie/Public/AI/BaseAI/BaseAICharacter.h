@@ -6,15 +6,6 @@
 #include "GameFramework/Character.h"
 #include "BaseAICharacter.generated.h"
 
-UENUM(BlueprintType)
-enum class AIDecision : uint8
-{
-	none,
-	Patrol,
-	Research,
-	Persecution
-};
-
 UCLASS()
 class ZADANIE_API ABaseAICharacter : public ACharacter
 {
@@ -30,9 +21,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI")
 		bool IsOn = false;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		class UStatComponent* StatComponent;
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 public:	
 	// Called every frame
@@ -40,5 +36,11 @@ public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void Patrol();
+
+	UFUNCTION(BlueprintCallable, Category = "Stats")
+	void Attack();
 
 };
